@@ -55,30 +55,28 @@ const UserSliceContext =
   React.createContext<UserSliceValue | undefined>(undefined);
 UserSliceContext.displayName = "UserSliceContext";
 
-//
-export function withUserSlice<P extends { user: User }>(
-  WrappedComponent: React.ComponentType<P>
-): React.ComponentType<Omit<P, "user">> {
-  console.log("withUserSlice outer");
-
-  return (props: Omit<P, "user">) => {
-    console.log("withUserSlice inner");
-    const { user } = useClerk();
-    return React.useMemo(
-      () => <WrappedComponent {...(props as P)} user={user} />,
-      [user]
-    );
-  };
-}
-
-export const UserSliceProvider = withUserSlice(({ user, children }) => {
+export const UserSliceProvider = ({
+  children,
+}: {
+  children: React.ReactNode;
+}) => {
   console.log("UserSliceProvider renders");
-  return (
-    <UserSliceContext.Provider value={{ user }}>
-      {children}
-    </UserSliceContext.Provider>
+  const { user } = useClerk();
+  // We got 2 ways to stop a context from propagating down the tree:
+  // 1. Use a HOC that returns a new component and pass that value as a prop (so that
+  // component is not a context consumer, so it will rerender when props change)
+  // 2. Use useMemo and a comparator to decide when to rerender the provider
+  //
+  // option 1 is not optimal since we cant easily create a "useUser" hook
+  return React.useMemo(
+    () => (
+      <UserSliceContext.Provider value={{ user: user! }}>
+        {children}
+      </UserSliceContext.Provider>
+    ),
+    [user]
   );
-});
+};
 
 export function useUser() {
   const ctx = React.useContext(UserSliceContext);
